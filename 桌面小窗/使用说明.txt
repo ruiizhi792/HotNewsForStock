@@ -1,7 +1,15 @@
-桌面小窗 · 使用说明
+桌面小窗 · 使用说明 / How to use
 
 1. 双击「启动.vbs」即可打开小程序。
+   Double-click "启动.vbs" to open the app.
+
 2. 左栏需要联网才能显示 AI 评语；右栏画板完全离线可玩。
+   The left pane needs internet for AI comments; the drawing board works fully offline.
 
 没有配置 AI Key 时新闻列表照常显示，只是没有评语。
 点右上角齿轮可设置 API 地址、Key 与模型名，设置只保存在本机。
+Without an API key the news list still shows, just without AI commentary.
+Use the gear icon at top-right to set the API endpoint, key and model. Settings stay on this machine.
+
+窗口没有系统标题栏，拖动顶部标题条即可移动窗口。
+The window has no system title bar — drag the top bar to move it.

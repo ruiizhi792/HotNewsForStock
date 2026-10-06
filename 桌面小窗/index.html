@@ -22,26 +22,65 @@
   --flat:#7a869a;
 }
 *{box-sizing:border-box;}
-html,body{height:100%;}
+html{height:100%;}
+/* 页面根背景必须透明：真正的「无边框 +渐变透明」由外层 Win32 去掉标题栏、
+   再用圆角窗口区域把四角挖空，桌面会从圆角处透出来。
+   Chromium 的 app 窗口客户区始终是不透明的，所以这里能透的是「窗口形状」，
+   而不是页面像素 —— 视觉上表现为小窗浮在桌面上、四周渐隐。 */
 body{
+  height:100%;
   margin:0;
-  background:var(--bg);
+  background:transparent;
   color:var(--txt);
   font:14px/1.6 "Microsoft YaHei UI","Microsoft YaHei","PingFang SC",-apple-system,"Segoe UI",sans-serif;
   overflow:hidden;
   -webkit-font-smoothing:antialiased;
   user-select:none;
 }
+/* 外壳：留出透明边距 + 圆角 + 渐变描边，边缘向桌面渐隐 */
+.shell{
+  position:relative;
+  height:100%;
+  margin:10px;                /* 透明边距：让圆角外的区域透出桌面 */
+  border-radius:22px;
+  background:var(--bg);
+  overflow:hidden;
+  /* 渐变描边：上/下两端更亮，中部收敛，形成「向桌面渐隐」的观感 */
+  box-shadow:
+    0 0 0 1px rgba(120,160,255,.28),
+    0 0 22px rgba(80,140,255,.18),
+    0 18px 50px rgba(0,0,0,.55);
+}
+/* 顶部内侧高光，进一步强化玻璃感 */
+.shell::before{
+  content:"";
+  position:absolute;left:0;right:0;top:0;height:120px;
+  background:linear-gradient(180deg,rgba(140,180,255,.10),rgba(140,180,255,0));
+  pointer-events:none;z-index:3;
+}
+/* 外发光：向四周渐隐，模拟与桌面融合 */
+.shell::after{
+  content:"";
+  position:absolute;inset:-14px;
+  border-radius:32px;
+  background:radial-gradient(ellipse at center,rgba(90,140,255,.16),rgba(90,140,255,0) 70%);
+  pointer-events:none;z-index:-1;
+}
+.inner{position:relative;height:100%;display:flex;flex-direction:column;z-index:2;}
 button{font-family:inherit;}
 
-/* ===================== 顶部窄条 ===================== */
+/* ===================== 顶部窄条（兼作无边框窗口的拖拽区） ===================== */
 .topbar{
   height:46px;
+  flex:none;
   display:flex;align-items:center;justify-content:space-between;
   padding:0 16px;
   border-bottom:1px solid var(--line);
-  background:var(--bg-soft);
+  background:linear-gradient(180deg,rgba(28,36,52,.92),rgba(17,22,33,.92));
+  -webkit-app-region:drag;      /* 去掉系统标题栏后，用它拖动窗口 */
+  app-region:drag;
 }
+.topbar .brand,.topbar .gear{-webkit-app-region:no-drag;app-region:no-drag;}
 .brand{display:flex;align-items:center;gap:9px;font-size:14px;letter-spacing:.5px;}
 .brand .dot{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 8px var(--up);}
 .brand .sub{color:var(--txt-faint);font-size:12px;letter-spacing:0;}
@@ -55,7 +94,7 @@ button{font-family:inherit;}
 .gear svg{width:17px;height:17px;}
 
 /* ===================== 主体左右分栏 ===================== */
-.main{display:flex;height:calc(100% - 46px);}
+.main{display:flex;flex:1;min-height:0;}
 .left{
   width:55%;min-width:0;
   border-right:1px solid var(--line);
@@ -257,6 +296,10 @@ button{font-family:inherit;}
 </head>
 <body>
 
+<!-- 外壳：透明边距 + 圆角 + 渐变描边，配合 Win32 去标题栏与圆角窗口区域 -->
+<div class="shell">
+<div class="inner">
+
 <div class="topbar">
   <div class="brand">
     <span class="dot"></span>
@@ -324,6 +367,10 @@ button{font-family:inherit;}
     </div>
   </div>
 </div>
+
+</div><!-- /.main -->
+</div><!-- /.inner -->
+<!-- /.shell -->
 
 <!-- 设置弹层 -->
 <div class="mask" id="mask">

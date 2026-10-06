@@ -1,6 +1,9 @@
-# 启动器必须原样保留 CRLF：VBScript 解析器对 LF-only 的 .vbs 在部分 Windows 环境会直接报错。
-# 标记为 -text 关闭所有行尾归一化，确保证切到仓库里就是 CRLF。
+# 启动器与窗口修饰脚本必须原样保留 CRLF，且不做任何归一化：
+#   .vbs —— VBScript 解析器对 LF-only 的文件在部分 Windows 环境会直接报错
+#   .ps1 —— 含中文注释，必须带 UTF-8 BOM，否则 Windows 自带脚本宿主按 GBK 解析会语法出错
+# 标记为 -text 关闭所有行尾/编码转换，保证检出后就是原样。
 桌面小窗/*.vbs -text
+桌面小窗/*.ps1 -text
 
 # 说明与页面：仓库内统一存 LF，检出时转 CRLF
 *.txt text eol=crlf
