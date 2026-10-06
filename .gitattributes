@@ -1,0 +1,6 @@
+# 启动器必须是 CRLF：VBScript 解析器对 LF-only 的 .vbs 在部分环境下会报错
+*.vbs text eol=crlf
+*.txt text eol=crlf
+*.html text eol=crlf
+*.md text eol=lf
+*.png binary

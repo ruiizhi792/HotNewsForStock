@@ -1,0 +1,14 @@
+# 验收过程截图（临时产物，不入库）
+桌面小窗/_验收截图/
+
+# 系统与编辑器
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# 本地敏感文件：绝不提交
+.env
+*.key
+*.pem
