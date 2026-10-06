@@ -1,5 +1,8 @@
-# 启动器必须是 CRLF：VBScript 解析器对 LF-only 的 .vbs 在部分环境下会报错
-*.vbs text eol=crlf
+# 启动器必须原样保留 CRLF：VBScript 解析器对 LF-only 的 .vbs 在部分 Windows 环境会直接报错。
+# 标记为 -text 关闭所有行尾归一化，确保证切到仓库里就是 CRLF。
+桌面小窗/*.vbs -text
+
+# 说明与页面：仓库内统一存 LF，检出时转 CRLF
 *.txt text eol=crlf
 *.html text eol=crlf
 *.md text eol=lf
