@@ -1,10 +1,14 @@
 桌面小窗 · 使用说明 / How to use
 
-1. 双击「启动.vbs」即可打开小程序。
-   Double-click "启动.vbs" to open the app.
+1. 双击「启动.vbs」即可打开小程序（或直接双击「桌面小窗.exe」）。
+   Double-click "启动.vbs" to open the app (or run "桌面小窗.exe" directly).
 
 2. 左栏需要联网才能显示 AI 评语；右栏画板完全离线可玩。
    The left pane needs internet for AI comments; the drawing board works fully offline.
+
+3. 窗口是亚克力材质：半透明、无边框、圆角，拖动时能隐约看到桌面。
+   The window uses Windows 11 acrylic: translucent, frameless, rounded corners,
+  and you can faintly see your desktop through it while dragging.
 
 没有配置 AI Key 时新闻列表照常显示，只是没有评语。
 点右上角齿轮可设置 API 地址、Key 与模型名，设置只保存在本机。
@@ -13,3 +17,15 @@ Use the gear icon at top-right to set the API endpoint, key and model. Settings 
 
 窗口没有系统标题栏，拖动顶部标题条即可移动窗口。
 The window has no system title bar — drag the top bar to move it.
+
+────────────────────────────────────────────────
+关于体积 / About the size
+「桌面小窗.exe」约 64 MB，因为它自带 .NET 运行时，
+这样才能做出真正的亚克力效果。若不想用它，删掉 exe 也能运行：
+启动.vbs 会自动退回 Edge --app 模式（无地址栏、无标签页、圆角，
+但没有半透明亚克力）。
+
+The exe is ~64 MB because it bundles the .NET runtime — that's what enables
+real acrylic. You can delete it and still run: the launcher falls back to
+Edge --app mode (no address bar, no tabs, rounded corners, but no translucency).
+────────────────────────────────────────────────

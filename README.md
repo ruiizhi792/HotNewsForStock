@@ -91,29 +91,47 @@ call per headline.
 
 ```
 桌面小窗/  (Desktop Mini Window/)
-├── index.html                  all UI and logic, single file, zero dependencies
-├── 启动.vbs      Launch.vbs        double-click to open the app
-├── 窗口修饰.ps1  WindowStyling.ps1 strips the title bar, applies rounded corners
-└── 使用说明.txt   ReadMe.txt          brief usage notes
+├── 桌面小窗.exe        DesktopMiniWindow.exe   WebView2 host — real Win11 acrylic
+├── index.html                            all UI and logic, single file, zero dependencies
+├── 启动.vbs             Launch.vbs          double-click to open (prefers the exe)
+├── 窗口修饰.ps1         WindowStyling.ps1    Win32 styler for the fallback path
+└── 使用说明.txt          ReadMe.txt            brief usage notes
 ```
 
-The app is a local HTML page launched in Edge's `--app` mode. Not Electron or Tauri (those
-need a Node/Rust toolchain and produce builds hundreds of megabytes in size), and not `.hta`
-(IE engine — no modern JS, canvas, or fetch).
+There are two launch paths, and the launcher picks automatically:
 
-### A note on the frameless gradient border
+1. **`桌面小窗.exe` (preferred)** — a small C#/WebView2 host. This is what gives you **real
+   Windows 11 acrylic**: a translucent, frameless, rounded window where the desktop is
+   faintly visible through it while you drag.
+2. **Edge `--app` mode (fallback)** — if you delete the exe, `启动.vbs` falls back to opening
+   the page in an Edge app window (no address bar, no tabs) and runs a small Win32 script
+   to remove the title bar and round the corners. No translucency in this mode.
 
-The window is frameless and its corners are genuinely transparent — the desktop shows
-through the rounded corners, and the border fades outward. Getting there required a small
-Win32 helper (`WindowStyling.ps1`), which strips `WS_CAPTION` and applies a rounded window
-region via `SetWindowRgn`.
+Not Electron or Tauri (those need a Node/Rust toolchain and produce builds hundreds of
+megabytes), and not `.hta` (IE engine — no modern JS, canvas, or fetch).
 
-One honest caveat: **Chromium app windows always paint an opaque client area.** Making the
-page background itself transparent (`background: transparent` in CSS) has no effect — this
-was verified by pixel-sampling a real window on screen. So what you see is the *window shape*
-being cut away at the corners, not per-pixel page transparency. The CSS gradient border
-supplies the fade-from-inside look. A true acrylic/mica blur would need Electron or Tauri,
-which would break the "one small file, no toolchain" constraint.
+### How the acrylic is done
+
+`桌面小窗.exe` is a ~150-line C# WinForms host around **WebView2**:
+
+- `DefaultBackgroundColor = Transparent` on the control, plus `DwmExtendFrameIntoClientArea(-1)`
+  so the page composites against the window background rather than an opaque layer.
+- The page is loaded through `SetVirtualHostNameToFolderMapping` as `https://app.local/`
+  rather than `file://`. This puts it in a normal secure context, which is what lets the RSS
+  proxy calls and `localStorage` behave per spec.
+- `DwmSetWindowAttribute` with `DWMWA_SYSTEMBACKDROP_TYPE = 3` turns on the transient-window
+  acrylic; `WS_CAPTION` is stripped and a rounded window region is applied.
+- Chromium's own sandbox is disabled (`--no-sandbox`) so the renderer also starts inside
+  containers and locked-down environments.
+
+The WebView2 **runtime** is already present on any Windows 10/11 machine with Edge installed,
+so nothing extra is installed at runtime — the size is just the bundled .NET runtime.
+
+One honest caveat about the fallback path: **a plain Chromium/Edge app window always paints an
+opaque client area.** Making the page background transparent in CSS has no effect there — this
+was verified by pixel-sampling a real window on screen. So in fallback mode what you get is the
+*window shape* cut away at the corners plus a CSS gradient border, not per-pixel transparency.
+Acrylic genuinely requires the WebView2 host.
 
 ## Known limitations
 
@@ -123,8 +141,10 @@ which would break the "one small file, no toolchain" constraint.
   blank screen.
 - RSS headlines are mostly English. With an AI key configured they get translated to
   Chinese; without one they show as-is.
-- Verified on Windows + Edge only. Other browsers are untested.
-- The frameless styling needs PowerShell (built into Windows). If it can't run, the app
+- Acrylic requires Windows 11 (build 22000+ / 22H2). On Windows 10 the host still runs and the
+  window is frameless and rounded, but the backdrop falls back to a plain translucent tint.
+- Verified on Windows 11 25H2 only. Other browsers are untested.
+- The fallback path's styling needs PowerShell (built into Windows). If it can't run, the app
   still opens — just with a normal title bar.
 
 ## Disclaimer
@@ -191,25 +211,37 @@ Act at your own risk.
 配了之后评语是**一次批量请求处理 10 条**，不会一条新闻调一次 API。
 Key 只存在本机 localStorage，只在请求时放进 `Authorization` 头。
 
-### 无边框渐变边框是怎么做的
+### 无边框亚克力是怎么做的
 
-窗口无边框，四角是真透明的——桌面从圆角处透出来，边缘向外渐隐。
-靠的是一个小的 Win32 辅助脚本（`窗口修饰.ps1`）：去掉 `WS_CAPTION`，再用
-`SetWindowRgn` 把窗口区域切成圆角。
+窗口无边框、半透明、圆角，拖动时能隐约看到桌面。这是靠 `桌面小窗.exe`
+（一个约 150 行的 C# + WebView2 宿主）实现的：
 
-需要说明一点：**Chromium 的 app 窗口客户区始终是不透明的**，
-页面里写 `background: transparent` 不生效（这一点用真实窗口做过像素采样验证）。
-所以透出桌面的是「窗口形状被裁掉」的部分，不是页面像素级透明；
-由内向外的渐隐观感由 CSS 的渐变描边负责。真正的亚克力/毛玻璃效果需要 Electron 或
-Tauri，那会破坏「单个小文件、不装工具链」这个前提。
+- 控件 `DefaultBackgroundColor = Transparent`，配合 `DwmExtendFrameIntoClientArea(-1)`，
+  让页面与窗口背景合成而不是盖一层不透明底
+- 页面通过 `SetVirtualHostNameToFolderMapping` 映射为 `https://app.local/` 加载，
+  而不是 `file://`。这样页面处在正常安全上下文，RSS 代理请求与 localStorage
+  才会按标准行为工作
+- `DwmSetWindowAttribute` 设 `DWMWA_SYSTEMBACKDROP_TYPE = 3` 开启瞬态窗口亚克力，
+  同时去掉 `WS_CAPTION` 并给窗口区域打圆角
+- 关掉 Chromium 自身的沙箱（`--no-sandbox`），让它在受限环境里也能起渲染进程
+
+WebView2 **运行时**在装了Edge 的 Win10/11 上本来就有了，运行时不需额外安装，
+体积大只是因为把 .NET 运行时打进了单文件。
+
+如果删掉 exe，启动器会自动退回 Edge `--app` 模式：无地址栏、无标签页、圆角，
+但**没有半透明亚克力**——因为纯 Chromium app 窗口的客户区始终是不透明的
+（这一点用真实窗口做过像素采样验证），CSS 里的 `background: transparent` 对它无效。
 
 ### 已知限制
 
 - 依赖公共 CORS 代理，代理时好时坏，失败会自动换端点重试；全挂则走示例数据。
   这种情况下 F12 里可能看到浏览器层面的 CORS 报错，但不会有脚本报错，也不会白屏。
 - RSS 标题多为英文，配置 AI 后会被翻成中文；没配则显示原文。
-- 只验证了 Windows + Edge，其他浏览器没测。
-- 无边框效果依赖 PowerShell（Windows 自带）。若无法执行，程序仍能打开，只是会带普通标题栏。
+- 亚克力需要 Windows 11（build 22000+ / 22H2）。Win10 上窗口仍是无边框圆角，
+  但背景会退化成普通半透明色。
+- 只验证了 Windows 11 25H2，其他浏览器没测。
+- 退回Edge 模式时的修饰依赖 PowerShell（Windows 自带）；若无法执行，程序仍能打开，
+  只是会带普通标题栏。
 
 ### 免责声明
 

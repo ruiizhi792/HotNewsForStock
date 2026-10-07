@@ -1,22 +1,31 @@
-' 桌面小窗 —— 无边框 / 渐变透明启动器
+' 桌面小窗 —— 启动器
 '
-' 做两件事：
-'   1) 用 Edge --app 模式打开本地页面（无地址栏、无标签页）
-'   2) 调 PowerShell 去掉系统标题栏，并把窗口区域切成圆角
-'      —— 四角之外是真正的桌面，小窗看起来「浮」在桌面上、边缘渐隐。
-'
-' 说明：Chromium 的 app 窗口客户区本身始终不透明，
-'       所以能透出桌面的是「窗口形状（圆角）」而不是页面像素；
-'       页面内的渐变描边负责由内向外渐隐的观感。
+' 优先走「桌面小窗.exe」（WebView2 宿主，有真正的 Win11 亚克力：
+' 窗口无边框、圆角、内容半透明，拖动时能隐约透出桌面）。
+' 若 exe 缺失或启动失败，自动退回 Edge --app 模式（无地址栏、无标签页），
+' 并调 PowerShell 去标题栏 + 打圆角，作为不依赖工具链的备用方案。
+
 Option Explicit
-Dim shell, fso, page, edge, candidates, c, i, envPath, ps, baseDir, cmd
+Dim shell, fso, baseDir, exe, edge, candidates, c, i, envPath, ps, page, cmd
+
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
 baseDir = fso.GetParentFolderName(WScript.ScriptFullName)
 page = "file:///" & Replace(baseDir, "\", "/") & "/index.html"
+exe = baseDir & "\桌面小窗.exe"
 
-' 候选路径：优先 64 位，再 32 位，最后当前用户安装目录
+' ── 方案一：WebView2 宿主（亚克力）──
+If fso.FileExists(exe) Then
+  On Error Resume Next
+  shell.Run """" & exe & """", 1, False
+  If Err.Number = 0 Then
+    WScript.Quit 0
+  End If
+  On Error GoTo 0
+End If
+
+' ── 方案二：退回 Edge --app 模式 ──
 envPath = shell.ExpandEnvironmentStrings("%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe")
 candidates = Array( _
   "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe", _
@@ -30,17 +39,18 @@ For i = 0 To UBound(candidates)
 Next
 
 If edge = "" Then
-  ' 找不到 Edge 时退回默认浏览器（体验降级但仍可用）
+  ' 连 Edge 都没有：直接用系统默认浏览器打开，程序仍可用
   shell.Run """" & Replace(page, "file:///", "") & """", 1, False
 Else
-  ' --app 模式：无地址栏、无标签页、独立窗口 —— 小程序观感的关键
+  ' --app 模式：无地址栏、无标签页、独立窗口
   shell.Run """" & edge & """ --app=""" & page & """ --window-size=1200,740", 1, False
 End If
 
-' 等页面窗口出现后，再去标题栏并打圆角（隐藏运行，不闪黑窗）
+' 等页面窗口出现后，去标题栏并打圆角（隐藏运行，不闪黑窗）
 WScript.Sleep 1400
 ps = shell.ExpandEnvironmentStrings("%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe")
-If fso.FileExists(ps) Then
-  cmd = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File """ & baseDir & "\窗口修饰.ps1"""
+decorator = baseDir & "\窗口修饰.ps1"
+If fso.FileExists(ps) And fso.FileExists(decorator) Then
+  cmd = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File """ & decorator & """"
   shell.Run """" & ps & """ " & cmd, 0, False
 End If
